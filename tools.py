@@ -11,6 +11,10 @@ import gc
 def default_filter(entry): return entry['main']['document_type']['id'] == 1
 
 
+def filter_data(data, some_filter=default_filter):
+    return filter(some_filter, data)
+
+
 def get_json(filename='declarations.json', update=False):
     def progress_hook(count, block_size, total_size):
         global start_time
@@ -38,39 +42,60 @@ def get_json(filename='declarations.json', update=False):
         urllib.request.urlretrieve(url, filename, progress_hook)
         print('Done.')
         data = get_json(filename)
+
+    data = filter_data(data)
+    #data = filter_data(data, lambda e: e['main']['year'] == 2018)
     gc.collect()
+
     return data
 
 
-def filter_data(data, some_filter=default_filter):
-    return filter(some_filter, data)
-
-
-def create_list(entity, filename=None):
+def create_mapping(entity_from, entity_to, field_from, field_to, as_set=False, filename=None):
     if filename == None:
-        filename = entity + '_list.json'
+        filename = entity_from + '_' + field_from + \
+            '2' + entity_to + '_' + field_to
+        if as_set == True:
+            filename += '_set'
+        filename += '.json'
 
     json_data = get_json()
-    json_data = filter_data(json_data)
 
-    entries = defaultdict(str)
+    mapping = defaultdict(int)
+    if as_set == True:
+        mapping = defaultdict(list)
+
     for entry in json_data:
-        e = entry['main'][entity]
-        entries[e['id']] = e['name']
+        e_from = entry['main'][entity_from]
+        e_to = entry['main'][entity_to]
+        if as_set == True:
+            if not (e_to[field_to] in mapping[e_from[field_from]]):
+                mapping[e_from[field_from]].append(e_to[field_to])
+        else:
+            mapping[e_from[field_from]] = e_to[field_to]
 
     with open(filename, 'wt') as file:
-        json.dump(entries, file, ensure_ascii=False)
+        json.dump(mapping, file, ensure_ascii=False)
 
 
-def get_list(entity, filename=None):
+def get_mapping(entity_from, entity_to, field_from, field_to, as_set=False, filename=None, update=False):
     if filename == None:
-        filename = entity + '_list.json'
+        filename = entity_from + '_' + field_from + \
+            '2' + entity_to + '_' + field_to
+        if as_set == True:
+            filename += '_set'
+        filename += '.json'
+
+    if update == True:
+        os.remove(filename)
 
     data = None
     try:
         with open(filename, 'rt') as file:
             data = json.loads(file.read())
     except FileNotFoundError:
-        create_list(entity, filename)
-        data = get_list(entity, filename)
+        create_mapping(entity_from, entity_to, field_from,
+                       field_to, as_set, filename)
+        data = get_mapping(entity_from, entity_to,
+                           field_from, field_to, as_set, filename)
+
     return data

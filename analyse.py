@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import itertools
 from collections import defaultdict
 import tools
+import re
 
 
 def get_income_data(year):
     json_data = tools.get_json()
-    json_data = tools.filter_data(json_data)
     json_data = tools.filter_data(json_data,
                                   lambda e: e['main']['year'] == year)
 
@@ -64,12 +64,37 @@ def test_income():
     plt.show()
 
 
+def standardise_name(name):
+    tokens = name.replace('.', ' ').split()
+    assert len(tokens) >= 2 and len(tokens) <= 4, str(name)  # sanity check
+
+    return tokens
+
+
 def preprocess():
-    person_list = tools.get_list('person')
-    office_list = tools.get_list('office')
-    for o in office_list:
-        print(o, office_list[o])
+    global person_id2name, person_name2id
+    global office_id2name, office_name2id
+
+    need_update = True
+
+    person_id2name = tools.get_mapping('person', 'person', 'id', 'name',
+                                       update=need_update)
+    office_id2name = tools.get_mapping('office', 'office', 'id', 'name',
+                                       update=need_update)
+    person_name2id = tools.get_mapping('person', 'person', 'name', 'id', as_set=True,
+                                       update=need_update)
+    office_name2id = tools.get_mapping('office', 'office', 'name', 'id', as_set=True,
+                                       update=need_update)
 
 
 if __name__ == '__main__':
     preprocess()
+
+    for p in person_name2id:
+        if (len(person_name2id[p]) > 1):
+            print(p, person_name2id[p], [person_id2name[str(id)]
+                                         for id in person_name2id[p]])
+
+    # for p in person_name2id:
+    #    if 10 in person_name2id[p]:
+    #        print(p, person_name2id[p])
