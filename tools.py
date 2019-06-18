@@ -25,6 +25,9 @@ def get_json(filename='declarations.json', update=False):
                          (percent, progress_size / (1024 * 1024), speed, duration))
         sys.stdout.flush()
 
+    if update == True:
+        os.remove(filename)
+
     data = None
     try:
         with open(filename, 'rt') as file:
@@ -37,11 +40,6 @@ def get_json(filename='declarations.json', update=False):
         data = get_json(filename)
     gc.collect()
     return data
-
-
-def get_updated_json(filename='declarations.json'):
-    os.remove(filename)  # Make sure that you have enough privileges
-    return get_json(filename, update=True)
 
 
 def filter_data(data, some_filter=default_filter):
