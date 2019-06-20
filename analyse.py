@@ -113,15 +113,17 @@ def income_analysis():
         person_id = entry['main']['person']['id']
         office_id = entry['main']['office']['id']
         income = sum([e['size']
-                      for e in entry['incomes']])
+                      for e in entry['incomes'] if e['relative'] != None])
 
         data.append([year, person_id, office_id, income])
 
     dframe = pd.DataFrame(data)
     dframe.columns = ['year', 'person_id', 'office_id', 'income']
 
-    office_id = office_name2id['Государственная Дума'][0]
+    # office_name2id['Центральная избирательная комиссия'][0]
+    office_id = 14
     print('office_id:', office_id)
+    print('office_name:', office_id2name[str(office_id)])
     dframe = dframe.loc[dframe.loc[:, 'office_id'] == int(office_id), :]
 
     prs = []
@@ -136,43 +138,59 @@ def income_analysis():
             else:
                 values.append(None)
         income_data[p] = pd.Series(values, index=range(2010, 2018+1))
-        if not None in values:
-            prs.append(p)
+        prs.append(p)
 
     print('Total selected:', len(prs))
+
+    #prs = [137, 229, 46]
+    #fig, ax = plt.subplots()
     # for p in prs:
-    #    for q in prs:
-    #        if p != q:
-    # values_p = income_data[p].values.copy()
-    # values_q = income_data[q].values.copy()
-    # area_p = area(values_p)
-    # area_q = area(values_q)
+    #    ax.plot(income_data[p].index, income_data[p].values,
+    #            label=person_id2name[str(p)])
+    # plt.show()
 
-    # for i in range(len(values_p)):
-    #    values_p[i] /= area_p
-    #    values_q[i] /= area_q
+    for p in prs:
+        for q in prs:
+            if p > q:
+                relevant_years = []
+                relevant_values_p = []
+                relevant_values_q = []
+                for year in range(2010, 2018+1):
+                    if not (pd.isna(income_data[p][year]) or pd.isna(income_data[q][year])):
+                        relevant_years.append(year)
+                        relevant_values_p.append(income_data[p][year])
+                        relevant_values_q.append(income_data[q][year])
 
-    # corr = np.corrcoef(values_p,
-    #                   values_q)[0, 1]
-    #            corr = np.corrcoef(income_data[p].values,
-    #                               income_data[q].values)[0, 1]
+                if len(relevant_values_p) <= 5:
+                    continue
 
-    #            if corr > 0.9:
-    #                print(p, person_id2name[str(p)])
-    #                print(q, person_id2name[str(q)])
-    #                print(corr)
+                print(relevant_values_p)
 
-    #                fig, ax = plt.subplots()
-    #                ax.plot(income_data[p].index, income_data[p].values,
-    #                        label=person_id2name[str(p)])
-    #                ax.plot(income_data[q].index, income_data[q].values,
-    #                        label=person_id2name[str(q)])
-    #                plt.legend(loc='bottom right')
-    #                plt.show()
+                corr = np.corrcoef(relevant_values_p,
+                                   relevant_values_q)[0, 1]
+
+                print(corr)
+
+                if corr > 0.95:
+                    print(p, person_id2name[str(p)])
+                    print(q, person_id2name[str(q)])
+                    print(corr)
+
+                    fig, ax = plt.subplots()
+                    ax.plot(relevant_years, relevant_values_p,
+                            label=person_id2name[str(p)])
+                    ax.plot(relevant_years, relevant_values_q,
+                            label=person_id2name[str(q)])
+                    plt.legend(loc='top left')
+                    plt.show()
 
 
 if __name__ == '__main__':
     preprocess()
+
+    for o in office2persons:
+        if (len(office2persons[str(o)]) > 500):
+            print(o, len(office2persons[str(o)]))
 
     income_analysis()
     # for p in person_name2id:
