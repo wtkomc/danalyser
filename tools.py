@@ -15,20 +15,21 @@ def filter_data(data, some_filter=default_filter):
     return filter(some_filter, data)
 
 
-def get_json(filename='declarations.json', update=False):
-    def progress_hook(count, block_size, total_size):
-        global start_time
-        if count == 0:
-            start_time = time.time()
-            return
-        duration = time.time() - start_time
-        progress_size = int(count * block_size)
-        speed = int(progress_size / (1024 * duration))
-        percent = int(count * block_size * 100 / total_size)
-        sys.stdout.write('\r %d%%, %d MB, %d KB/s, %d seconds passed' %
-                         (percent, progress_size / (1024 * 1024), speed, duration))
-        sys.stdout.flush()
+def progress_hook(count, block_size, total_size):
+    global start_time
+    if count == 0:
+        start_time = time.time()
+        return
+    duration = time.time() - start_time
+    progress_size = int(count * block_size)
+    speed = int(progress_size / (1024 * duration))
+    percent = int(count * block_size * 100 / total_size)
+    sys.stdout.write('\r %d%%, %d MB, %d KB/s, %d seconds passed' %
+                     (percent, progress_size / (1024 * 1024), speed, duration))
+    sys.stdout.flush()
 
+
+def get_json(filename='declarations.json', update=False):
     if update == True:
         os.remove(filename)
 
@@ -40,11 +41,31 @@ def get_json(filename='declarations.json', update=False):
         print('Downloading data...')
         url = 'https://declarator.org/media/dumps/declarations.json'
         urllib.request.urlretrieve(url, filename, progress_hook)
-        print('Done.')
+        print('\nDone.')
         data = get_json(filename)
 
     data = filter_data(data)
-    #data = filter_data(data, lambda e: e['main']['year'] == 2018)
+    # data = filter_data(data, lambda e: e['main']['year'] == 2018)
+    gc.collect()
+
+    return data
+
+
+def get_cars(filename='carbrand.json', update=False):
+    if update == True:
+        os.remove(filename)
+
+    data = None
+    try:
+        with open(filename, 'rt') as file:
+            data = json.loads(file.read())
+    except FileNotFoundError:
+        print('Downloading car dictionary...')
+        url = 'https://declarator.org/media/dumps/carbrand.json'
+        urllib.request.urlretrieve(url, filename, progress_hook)
+        print('\nDone.')
+        data = get_cars(filename)
+
     gc.collect()
 
     return data
